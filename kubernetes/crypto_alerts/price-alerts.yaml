@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crypto
+
+---
+apiVersion: v1
+data:
+  FINNHUB_API_TOKEN: YzE2cDc0ZjQ4djZwcGc3ZjB1dGc=
+  SLACK_API_TOKEN: eG94Yi0xMDUzMDY2Mzk3MzE4LTE4MTQ5MjAzMjYyNDItTkxnRTA3d2ZaekhZMEFJTWRhSmc0NHJ3
+kind: Secret
+metadata:
+  name: crypto
+  namespace: crypto
+type: Opaque
+
+---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: crypto_alerts-config
+#   namespace: crypto
+# data:
+#   SYMBOLS: ['BINANCE:ADABUSD', 'BINANCE:VETBUSD']
+#   CRYPTOS_BOUGHT: "{
+#     'ADABUSD': {'low': '1.10', 'mod': '1.20', 'high': '2.00'},
+#     'VETBUSD': {'low': '0.06', 'mod': '0.07', 'high': '0.100'}
+#     }"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: crypto-alerts
+  namespace: crypto
+spec:
+  schedule: "0/2 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: crypto-alerts
+          containers:
+          - name: alerts
+            image: kalaipm/crypto_alerts
+            envFrom:
+              - secretRef:
+                  name: crypto
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crypto-alerts
+  namespace: crypto
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crypto-alerts
+  namespace: crypto
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crypto-alerts
+subjects:
+- kind: ServiceAccount
+  name: crypto-alerts
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crypto-alerts
+  namespace: crypto
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
